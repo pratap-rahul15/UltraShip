@@ -1,13 +1,14 @@
-import MainLayout from "./layouts/MainLayout";
+import { Routes, Route, Navigate } from "react-router-dom";
+import MainLayout from "./layouts/MainLayout.jsx";
+import Employees from "./pages/Employees.jsx";
 
-function App() {
+export default function App() {
   return (
     <MainLayout>
-      <div className="text-3xl font-bold text-slate-700">
-        Ultraship Premium UI Loaded 🎉
-      </div>
+      <Routes>
+        <Route path="/" element={<Navigate to="/employees" replace />} />
+        <Route path="/employees" element={<Employees />} />
+      </Routes>
     </MainLayout>
   );
 }
-
-export default App;
