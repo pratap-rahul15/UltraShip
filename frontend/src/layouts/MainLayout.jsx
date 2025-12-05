@@ -1,6 +1,7 @@
 // MainLayout component with responsive sidebar and top navbar.
-// Here I'm uisng the Tailwind CSS for styling and Heroicons for icons.
-import { useState } from "react";
+// Here I'm using Tailwind CSS for styling and Heroicons for icons.
+import { useState, useContext } from "react";
+import { AuthContext } from "../context/AuthContext.jsx";
 import {
   Bars3Icon,
   XMarkIcon,
@@ -22,8 +23,10 @@ const topMenu = ["Grid View", "Tile View", "Reports", "Settings"];
 
 export default function MainLayout({ children }) {
   const [open, setOpen] = useState(false);
-  
-// Responsive sidebar state
+
+  const { username, role, logout } = useContext(AuthContext);
+
+  // Responsive sidebar state
   return (
     <div className="flex h-screen bg-gradient-to-br from-slate-100 to-slate-200 text-slate-800">
 
@@ -100,7 +103,16 @@ export default function MainLayout({ children }) {
             ))}
           </nav>
 
-          <div className="font-medium">Admin • Rahul</div>
+          {/* Dynamic User Section */}
+          <div className="font-medium flex items-center gap-4 capitalize">
+            {username} • {role}
+            <button
+              onClick={logout}
+              className="text-sm underline text-blue-600 ml-2"
+            >
+              Logout
+            </button>
+          </div>
         </header>
 
         {/* Content */}

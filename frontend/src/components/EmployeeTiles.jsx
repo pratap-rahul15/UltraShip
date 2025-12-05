@@ -1,14 +1,36 @@
 // EmployeeTiles component displaying employee information in tile format with placeholder data.
+
 import { useState } from "react";
 import AttendanceBar from "./AttendanceBar";
 import BunMenu from "./BunMenu";
 import EmployeeDetailModal from "./EmployeeDetailModal";
+import EditEmployeeModal from "./EditEmployeeModal";
+import DeleteEmployeeModal from "./DeleteEmployeeModal";
 
-// EmployeeTiles is a tile-based view for displaying employee details.
-export default function EmployeeTiles({ employees, loading }) {
+export default function EmployeeTiles({ employees, loading, refetch }) {
+
   const [selected, setSelected] = useState(null);
+  const [detailsOpen, setDetailsOpen] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
 
-  // here we can see the loading placeholders
+  // Functions to open modals
+  function openDetails(emp) {
+    setSelected(emp);
+    setDetailsOpen(true);
+  }
+
+  function openEdit(emp) {
+    setSelected(emp);
+    setEditOpen(true);
+  }
+
+  function openDelete(emp) {
+    setSelected(emp);
+    setDeleteOpen(true);
+  }
+
+  
   if (loading)
     return (
       <div className="grid md:grid-cols-3 lg:grid-cols-4 gap-6">
@@ -21,22 +43,30 @@ export default function EmployeeTiles({ employees, loading }) {
       </div>
     );
 
-    // Render the Employee Tiles
+  // Render the employee tiles
   return (
     <>
       <div className="grid md:grid-cols-3 lg:grid-cols-4 gap-6">
         {employees.map((emp) => (
           <div
             key={emp.id}
-            onClick={() => setSelected(emp)}
+            onClick={() => openDetails(emp)}
             className="
               relative p-6 rounded-2xl bg-white/70 backdrop-blur-xl border border-white/30 
               shadow-xl hover:shadow-2xl transition cursor-pointer
             "
           >
-            {/* Bun button */}
-            <div className="absolute top-3 right-3">
-              <BunMenu />
+            {/* Menu */}
+            <div
+              onClick={(e) => e.stopPropagation()}
+              className="absolute top-3 right-3"
+            >
+              <BunMenu
+                emp={emp}
+                onEdit={(emp) => openEdit(emp)}
+                onDelete={(emp) => openDelete(emp)}
+                onFlag={(emp) => console.log("flag", emp)}
+              />
             </div>
 
             <h3 className="text-xl font-semibold">{emp.name}</h3>
@@ -56,17 +86,33 @@ export default function EmployeeTiles({ employees, loading }) {
                 </span>
               ))}
             </div>
+
           </div>
         ))}
       </div>
 
       {/* Detail Modal */}
       <EmployeeDetailModal
-        open={!!selected}
+        open={detailsOpen}
         employee={selected}
-        onClose={() => setSelected(null)}
+        onClose={() => setDetailsOpen(false)}
+      />
+
+      {/* Edit Modal */}
+      <EditEmployeeModal
+        open={editOpen}
+        employee={selected}
+        onClose={() => setEditOpen(false)}
+        refetch={refetch}      
+      />
+
+      {/* Delete Modal */}
+      <DeleteEmployeeModal
+        open={deleteOpen}
+        employee={selected}
+        onClose={() => setDeleteOpen(false)}
+        refetch={refetch}      
       />
     </>
   );
 }
-

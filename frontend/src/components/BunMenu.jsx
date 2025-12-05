@@ -2,57 +2,70 @@
 import { useState, useRef, useEffect } from "react";
 import { EllipsisVerticalIcon } from "@heroicons/react/24/outline";
 
-export default function BunMenu({ onEdit, onFlag, onDelete }) {
+export default function BunMenu({ emp, onEdit, onDelete, onFlag }) {
   const [open, setOpen] = useState(false);
-  const menuRef = useRef();
+  const ref = useRef();
 
- // Close menu on outside click
+  // Close menu on outside click
   useEffect(() => {
     function handler(e) {
-      if (menuRef.current && !menuRef.current.contains(e.target)) {
+      if (ref.current && !ref.current.contains(e.target)) {
         setOpen(false);
       }
     }
-    document.addEventListener("click", handler);
-    return () => document.removeEventListener("click", handler);
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
   }, []);
 
-  // Menu JSX
   return (
-    <div className="relative" ref={menuRef}>
+    <div className="relative" ref={ref}>
+      {/* 3-Dots button */}
       <button
-        onClick={() => setOpen(!open)}
-        className="p-2 hover:bg-white/40 rounded-full transition"
+        onClick={(e) => {
+          e.stopPropagation();
+          setOpen(!open);
+        }}
+        className="p-2 hover:bg-gray-200 rounded-full transition"
       >
         <EllipsisVerticalIcon className="w-6 h-6 text-slate-600" />
       </button>
 
+      {/* Dropdown */}
       {open && (
         <div
           className="
-            absolute right-0 mt-2 w-40 
-            bg-white/80 backdrop-blur-xl border border-white/30 
-            shadow-xl rounded-xl p-2 z-20
-            animate-fadeIn
+            absolute right-0 mt-2 w-36 
+            bg-white/80 backdrop-blur-xl 
+            border border-slate-200 
+            shadow-xl rounded-lg z-50
           "
         >
           <button
-            onClick={onEdit}
-            className="block w-full text-left px-3 py-2 hover:bg-blue-50 rounded-lg"
+            onClick={() => {
+              setOpen(false);
+              onEdit(emp);
+            }}
+            className="block w-full text-left px-4 py-2 hover:bg-blue-50"
           >
             Edit
           </button>
 
           <button
-            onClick={onFlag}
-            className="block w-full text-left px-3 py-2 hover:bg-yellow-50 rounded-lg"
+            onClick={() => {
+              setOpen(false);
+              onFlag(emp);
+            }}
+            className="block w-full text-left px-4 py-2 hover:bg-yellow-50"
           >
-            Flag
+            {emp.flagged ? "Unflag" : "Flag"}
           </button>
 
           <button
-            onClick={onDelete}
-            className="block w-full text-left px-3 py-2 hover:bg-red-50 rounded-lg text-red-600"
+            onClick={() => {
+              setOpen(false);
+              onDelete(emp);
+            }}
+            className="block w-full text-left px-4 py-2 hover:bg-red-50 text-red-600"
           >
             Delete
           </button>

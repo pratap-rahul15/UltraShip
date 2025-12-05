@@ -1,81 +1,54 @@
 // Schema definition for the Employee Management GraphQL API
 // using Apollo Server and GraphQL
 // Includes types, queries, mutations, filtering, sorting, and pagination.
-const { gql } = require('apollo-server-express');
+const { gql } = require("apollo-server-express");
 
-// GraphQL type definitions
-module.exports = gql`
+const typeDefs = gql`
   type Employee {
     id: ID!
     name: String!
-    age: Int
-    class: String
-    subjects: [String]
-    attendance: Float
-    flag: Boolean
-    createdAt: String
+    age: Int!
+    class: String!
+    subjects: [String!]!
+    attendance: Float!
+    flagged: Boolean     
   }
 
-  type PageInfo {
-    total: Int
-    page: Int
-    pageSize: Int
-    hasNext: Boolean
+  type PaginatedEmployees {
+    data: [Employee!]!
+    page: Int!
+    pageSize: Int!
+    total: Int!
   }
-
-  type EmployeePage {
-    items: [Employee!]!
-    pageInfo: PageInfo!
-  }
-
-  input EmployeeFilter {
-    nameContains: String
-    minAttendance: Float
-    classEquals: String
-  }
-
-  enum EmployeeSortField { name age attendance createdAt }
-  enum SortDirection { ASC DESC }
 
   type Query {
-    employees(
-      page: Int = 1,
-      pageSize: Int = 10,
-      filter: EmployeeFilter,
-      sortField: EmployeeSortField = createdAt,
-      sortDirection: SortDirection = DESC
-    ): EmployeePage!
-
+    employees(page: Int, pageSize: Int, search: String): PaginatedEmployees!
     employee(id: ID!): Employee
-    me: User
-  }
-
-  input EmployeeInput {
-    name: String!
-    age: Int
-    class: String
-    subjects: [String]
-    attendance: Float
-  }
-
-  type AuthPayload {
-    token: String
-    user: User
-  }
-
-  type User {
-    id: ID!
-    username: String!
-    role: String!
-    employeeId: ID
   }
 
   type Mutation {
-    addEmployee(input: EmployeeInput!): Employee
-    updateEmployee(id: ID!, input: EmployeeInput!): Employee
-    deleteEmployee(id: ID!): Boolean
+    addEmployee(
+      name: String!
+      age: Int!
+      class: String!
+      subjects: [String!]!
+      attendance: Float!
+    ): Employee!
 
-    login(username: String!, password: String!): AuthPayload
-    signup(username: String!, password: String!, role: String): AuthPayload
+    updateEmployee(
+      id: ID!
+      name: String
+      age: Int
+      class: String
+      subjects: [String!]
+      attendance: Float
+      flagged: Boolean       
+    ): Employee!
+
+    deleteEmployee(id: ID!): Boolean!
+
+    flagEmployee(id: ID!, flagged: Boolean!): Employee!   # OPTIONAL BUT USEFUL
   }
 `;
+
+module.exports = typeDefs;
