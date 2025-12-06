@@ -24,35 +24,51 @@ async function start() {
 
   app.use(express.json());
 
-  // Authentication middleware (attaches req.user if token present)
+  // Authentication middleware 
   app.use(authMiddleware);
 
-  // Login route
+  // Models
   const User = require("./models/User");
+  const Employee = require("./models/Employee");
   const bcrypt = require("bcryptjs");
   const jwt = require("jsonwebtoken");
 
-  app.post("/login", async (req, res) => {
-    console.log("REQ BODY DEBUG:", req.body);
 
+  app.get("/seed-employees", async (req, res) => {
+    try {
+      const count = await Employee.countDocuments();
+      if (count > 0) return res.json({ message: "Employees already exist. Seed skipped." });
+
+      const sample = [];
+      for (let i = 1; i <= 50; i++) {
+        sample.push({
+          name: `Employee ${i}`,
+          age: 20 + (i % 10),
+          class: ["A", "B", "C"][i % 3],
+          subjects: ["Math", "Science", "English", "History"].slice(0, (i % 4) + 1),
+          attendance: Math.floor(Math.random() * 100),
+        });
+      }
+
+      await Employee.insertMany(sample);
+
+      res.json({ message: "Inserted 50 employees successfully 🚀" });
+    } catch (err) {
+      console.error("SEED ERROR:", err);
+      res.status(500).json({ error: "Seed failed" });
+    }
+  });
+
+
+  app.post("/login", async (req, res) => {
     const { username, password } = req.body;
 
     try {
       const user = await User.findOne({ username });
-      console.log("DB USER FOUND:", user);
-
-      if (!user) {
-        console.log("LOGIN ERROR: user not found in database");
-        return res.status(400).json({ error: "Invalid username or password" });
-      }
+      if (!user) return res.status(400).json({ error: "Invalid username or password" });
 
       const match = await bcrypt.compare(password, user.passwordHash);
-      console.log("PASSWORD MATCH RESULT:", match);
-
-      if (!match) {
-        console.log("LOGIN ERROR: incorrect password");
-        return res.status(400).json({ error: "Invalid username or password" });
-      }
+      if (!match) return res.status(400).json({ error: "Invalid username or password" });
 
       const token = jwt.sign(
         { id: user._id, role: user.role, employeeId: user.employeeId },
@@ -60,49 +76,36 @@ async function start() {
         { expiresIn: "7d" }
       );
 
-      console.log("LOGIN SUCCESS: token generated");
-
-      return res.json({
-        token,
-        role: user.role,
-        employeeId: user.employeeId || null,
-      });
-
+      return res.json({ token, role: user.role, employeeId: user.employeeId || null });
     } catch (err) {
-      console.error("SERVER LOGIN ERROR:", err);
+      console.error("LOGIN ERROR:", err);
       return res.status(500).json({ error: "Server error" });
     }
   });
 
-  // Route to create an admin user (for initial setup)
+
   app.get("/create-admin", async (req, res) => {
     try {
-      const bcrypt = require("bcryptjs");
-      const User = require("./models/User");
+      const existing = await User.findOne({ username: "admin" });
+      if (existing) return res.json({ message: "Admin already exists" });
 
-      const plain = "AdminPass123";
-      const hash = await bcrypt.hash(plain, 10);
+      const hash = await bcrypt.hash("AdminPass123", 10);
 
-      const newAdmin = await User.create({
+      await User.create({
         username: "admin",
         passwordHash: hash,
         role: "admin",
-        employeeId: null
+        employeeId: null,
       });
 
-      console.log("NEW ADMIN CREATED:", newAdmin);
-
-      res.json({ message: "Admin created", hash });
-
+      res.json({ message: "Admin created (admin / AdminPass123)" });
     } catch (err) {
-      console.error("ADMIN CREATION ERROR:", err);
+      console.error("ADMIN CREATE ERROR:", err);
       res.status(500).json({ error: "Unable to create admin" });
     }
   });
-  
 
-
-
+  // Apollo Server Setup
   const server = new ApolloServer({
     typeDefs,
     resolvers,
@@ -111,7 +114,6 @@ async function start() {
 
   await server.start();
 
-  // Apply Apollo middleware to Express app
   server.applyMiddleware({
     app,
     path: "/graphql",
@@ -121,24 +123,14 @@ async function start() {
     },
   });
 
-  // Connect to MongoDB and start the server
   const PORT = process.env.PORT || 4000;
 
-  console.log(" Connecting to MongoDB:", process.env.MONGO_URI);
-
   // Connect to MongoDB
-  await mongoose.connect(process.env.MONGO_URI, {
-    useNewUrlParser: true,
-    useUnifiedTopology: true,
-  });
-
-  mongoose.connection.on("connected", () => {
-    console.log(" CONNECTED TO DB NAME:", mongoose.connection.name);
-  });
+  await mongoose.connect(process.env.MONGO_URI);
 
   // Start the server
   app.listen(PORT, () => {
-    console.log(` Server ready at http://localhost:${PORT}${server.graphqlPath}`);
+    console.log(` Server running at port ${PORT}`);
   });
 }
 
