@@ -1,12 +1,13 @@
 import { ApolloClient, InMemoryCache, createHttpLink } from "@apollo/client";
 import { setContext } from "@apollo/client/link/context";
 
-// 1. GraphQL endpoint
+
 const httpLink = createHttpLink({
-  uri: "https://ultraship-backend-svqp.onrender.com/graphql",
+  uri: `${import.meta.env.VITE_API_URL}/graphql`,
+  credentials: "include", 
 });
 
-// 2. Attach Authorization header
+//  Attach the Bearer token here automatically
 const authLink = setContext((_, { headers }) => {
   const token = localStorage.getItem("token");
 
@@ -18,7 +19,7 @@ const authLink = setContext((_, { headers }) => {
   };
 });
 
-// 3. Creating the final client here.
+
 export const client = new ApolloClient({
   link: authLink.concat(httpLink),
   cache: new InMemoryCache(),
