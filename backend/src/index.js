@@ -104,7 +104,12 @@ async function start() {
     useUnifiedTopology: true,
   });
 
-  console.log("✔ MongoDB connected successfully");
+  mongoose.connection.on("connected", () => {
+  console.log("CONNECTED TO DB NAME:", mongoose.connection.name);
+});
+
+
+  console.log(" MongoDB connected successfully");
 
   // Start the server
   app.listen(PORT, () => {
