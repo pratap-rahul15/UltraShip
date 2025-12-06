@@ -3,7 +3,7 @@ import { setContext } from "@apollo/client/link/context";
 
 // 1. GraphQL endpoint
 const httpLink = createHttpLink({
-  uri: "http://localhost:4000/graphql",
+  uri: "https://ultraship-backend-svqp.onrender.com/graphql",
 });
 
 // 2. Attach Authorization header

@@ -12,17 +12,30 @@ const cors = require("cors");
 async function start() {
   const app = express();
 
-  // Use FRONTEND_URL from env or allow all during initial setup
+  // Use FRONTEND_URL from env or allow all 
   const FRONTEND = process.env.FRONTEND_URL || "*";
 
+  
+  app.use(express.json());
+
+  //  CORS MIDDLEWARE 
   app.use(
     cors({
       origin: FRONTEND,
       credentials: true,
+      methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+      allowedHeaders: ["Content-Type", "Authorization"],
     })
   );
 
-  app.use(express.json());
+  //  Preflight handler for CORS 
+  app.options("*", (req, res) => {
+    res.header("Access-Control-Allow-Origin", FRONTEND);
+    res.header("Access-Control-Allow-Credentials", "true");
+    res.header("Access-Control-Allow-Headers", "Content-Type, Authorization");
+    res.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
+    return res.sendStatus(200);
+  });
 
   // Authentication middleware (attaches req.user if token present)
   app.use(authMiddleware);
@@ -35,10 +48,15 @@ async function start() {
   app.post("/login", async (req, res) => {
     res.header("Access-Control-Allow-Origin", FRONTEND);
     res.header("Access-Control-Allow-Credentials", "true");
+
+    console.log("REQ BODY DEBUG:", req.body); 
+
     const { username, password } = req.body;
+
     try {
       const user = await User.findOne({ username });
       if (!user) return res.status(400).json({ error: "Invalid username or password" });
+
       const match = await bcrypt.compare(password, user.passwordHash);
       if (!match) return res.status(400).json({ error: "Invalid username or password" });
 
@@ -77,14 +95,11 @@ async function start() {
   const PORT = process.env.PORT || 4000;
 
   // Connect to MongoDB
-  await mongoose.connect(process.env.MONGO_URI, {
-    useNewUrlParser: true,
-    useUnifiedTopology: true,
-  });
+  await mongoose.connect(process.env.MONGO_URI);
 
   // Start the server
   app.listen(PORT, () => {
-    console.log(`🚀 Server ready at http://localhost:${PORT}${server.graphqlPath}`);
+    console.log(` Server ready at http://localhost:${PORT}${server.graphqlPath}`);
   });
 }
 

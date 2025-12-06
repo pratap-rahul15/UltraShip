@@ -12,7 +12,7 @@ export default function Login({ onLogin }) {
     setLoading(true);
 
     try {
-      const res = await fetch("http://localhost:4000/login", {
+      const res = await fetch("https://ultraship-backend-svqp.onrender.com/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ username, password }),
