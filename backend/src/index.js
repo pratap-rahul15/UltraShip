@@ -32,7 +32,6 @@ async function start() {
   const bcrypt = require("bcryptjs");
   const jwt = require("jsonwebtoken");
 
-  // 🔥🔥🔥 ADDED FULL DEBUG LOGS HERE
   app.post("/login", async (req, res) => {
     console.log("REQ BODY DEBUG:", req.body);
 
@@ -75,6 +74,35 @@ async function start() {
     }
   });
 
+  // Route to create an admin user (for initial setup)
+  app.get("/create-admin", async (req, res) => {
+    try {
+      const bcrypt = require("bcryptjs");
+      const User = require("./models/User");
+
+      const plain = "AdminPass123";
+      const hash = await bcrypt.hash(plain, 10);
+
+      const newAdmin = await User.create({
+        username: "admin",
+        passwordHash: hash,
+        role: "admin",
+        employeeId: null
+      });
+
+      console.log("NEW ADMIN CREATED:", newAdmin);
+
+      res.json({ message: "Admin created", hash });
+
+    } catch (err) {
+      console.error("ADMIN CREATION ERROR:", err);
+      res.status(500).json({ error: "Unable to create admin" });
+    }
+  });
+  
+
+
+
   const server = new ApolloServer({
     typeDefs,
     resolvers,
@@ -96,7 +124,7 @@ async function start() {
   // Connect to MongoDB and start the server
   const PORT = process.env.PORT || 4000;
 
-  console.log("⏳ Connecting to MongoDB:", process.env.MONGO_URI);
+  console.log(" Connecting to MongoDB:", process.env.MONGO_URI);
 
   // Connect to MongoDB
   await mongoose.connect(process.env.MONGO_URI, {
@@ -105,15 +133,12 @@ async function start() {
   });
 
   mongoose.connection.on("connected", () => {
-  console.log("CONNECTED TO DB NAME:", mongoose.connection.name);
-});
-
-
-  console.log(" MongoDB connected successfully");
+    console.log(" CONNECTED TO DB NAME:", mongoose.connection.name);
+  });
 
   // Start the server
   app.listen(PORT, () => {
-    console.log(`🚀 Server ready at http://localhost:${PORT}${server.graphqlPath}`);
+    console.log(` Server ready at http://localhost:${PORT}${server.graphqlPath}`);
   });
 }
 
