@@ -1,32 +1,35 @@
 import { useState } from "react";
 import toast from "react-hot-toast";
 
-
 export default function Login({ onLogin }) {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+
+ // API URL from env or default
+  const API = import.meta.env.VITE_API_URL || "http://localhost:4000";
 
   async function handleSubmit(e) {
     e.preventDefault();
     setLoading(true);
 
     try {
-      const res = await fetch("https://ultraship-backend-svqp.onrender.com/login", {
+      const res = await fetch(`${API}/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ username, password }),
       });
 
       const data = await res.json();
+
       if (!res.ok) throw new Error(data.error || "Login failed");
 
       localStorage.setItem("token", data.token);
       localStorage.setItem("role", data.role);
       localStorage.setItem("username", username);
 
-      toast.success("Welcome back ✨");
-      onLogin();
+      toast.success("Welcome back ${username}!");
+      onLogin(); 
     } catch (err) {
       toast.error(err.message);
     } finally {
@@ -35,29 +38,31 @@ export default function Login({ onLogin }) {
   }
 
   return (
-    <div className="
+    <div
+      className="
       h-screen w-full flex items-center justify-center 
       bg-gradient-to-br from-slate-100 to-slate-200 
       relative overflow-hidden
-    ">
-
+    "
+    >
       {/* Glow circles */}
       <div className="absolute top-10 left-10 w-60 h-60 bg-blue-200 rounded-full blur-3xl opacity-30"></div>
       <div className="absolute bottom-10 right-10 w-72 h-72 bg-purple-200 rounded-full blur-3xl opacity-30"></div>
 
-      <div className="
+      <div
+        className="
         backdrop-blur-2xl bg-white/40 
         border border-white/20 shadow-2xl 
         rounded-3xl p-10 w-[420px]
         transform transition-all duration-300
         hover:shadow-[0_8px_40px_rgba(0,0,0,0.15)]
-      ">
+      "
+      >
         <h2 className="text-3xl font-semibold text-center mb-8 tracking-tight text-slate-800">
           UltraShip Login
         </h2>
 
         <form onSubmit={handleSubmit} className="space-y-5">
-
           {/* Username */}
           <div className="relative">
             <input
@@ -72,9 +77,11 @@ export default function Login({ onLogin }) {
               onChange={(e) => setUsername(e.target.value)}
               required
             />
-            <label className="
+            <label
+              className="
               absolute left-4 -top-3 bg-white/60 px-2 text-xs text-slate-600
-            ">
+            "
+            >
               Username
             </label>
           </div>
@@ -93,9 +100,11 @@ export default function Login({ onLogin }) {
               onChange={(e) => setPassword(e.target.value)}
               required
             />
-            <label className="
+            <label
+              className="
               absolute left-4 -top-3 bg-white/60 px-2 text-xs text-slate-600
-            ">
+            "
+            >
               Password
             </label>
           </div>
