@@ -13,14 +13,17 @@ async function start() {
   const app = express();
 
   // Use FRONTEND_URL from env or allow all during initial setup
-  const FRONTEND = process.env.FRONTEND_URL || "*";
+const allowedOrigins = [
+  "http://localhost:5173",
+  "https://ultraship-phi.vercel.app"
+];
 
-  app.use(
-    cors({
-      origin: FRONTEND,
-      credentials: true,
-    })
-  );
+app.use(
+  cors({
+    origin: allowedOrigins,
+    credentials: true,
+  })
+);
 
   app.use(express.json());
 
@@ -88,14 +91,15 @@ async function start() {
 
   await server.start();
 
-  server.applyMiddleware({
-    app,
-    path: "/graphql",
-    cors: {
-      origin: FRONTEND,
-      credentials: true,
-    },
-  });
+server.applyMiddleware({
+  app,
+  path: "/graphql",
+  cors: {
+    origin: allowedOrigins,
+    credentials: true,
+  },
+});
+
 
   const PORT = process.env.PORT || 4000;
 
