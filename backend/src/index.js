@@ -33,33 +33,7 @@ async function start() {
   const bcrypt = require("bcryptjs");
   const jwt = require("jsonwebtoken");
 
-
-  app.get("/seed-employees", async (req, res) => {
-    try {
-      const count = await Employee.countDocuments();
-      if (count > 0) return res.json({ message: "Employees already exist. Seed skipped." });
-
-      const sample = [];
-      for (let i = 1; i <= 50; i++) {
-        sample.push({
-          name: `Employee ${i}`,
-          age: 20 + (i % 10),
-          class: ["A", "B", "C"][i % 3],
-          subjects: ["Math", "Science", "English", "History"].slice(0, (i % 4) + 1),
-          attendance: Math.floor(Math.random() * 100),
-        });
-      }
-
-      await Employee.insertMany(sample);
-
-      res.json({ message: "Inserted 50 employees successfully 🚀" });
-    } catch (err) {
-      console.error("SEED ERROR:", err);
-      res.status(500).json({ error: "Seed failed" });
-    }
-  });
-
-
+// Auth Routes
   app.post("/login", async (req, res) => {
     const { username, password } = req.body;
 
