@@ -6,43 +6,39 @@ const mongoose = require("mongoose");
 const typeDefs = require("./schema");
 const resolvers = require("./resolvers");
 const { authMiddleware } = require("./auth");
-
-// Added imports
 const cors = require("cors");
-const User = require("./models/User");
-const bcrypt = require("bcryptjs");
-const jwt = require("jsonwebtoken");
 
 // Initialize the Express application and Apollo Server
 async function start() {
   const app = express();
 
-  // 🔥 GLOBAL CORS (MUST BE FIRST)
+  // Use FRONTEND_URL from env or allow all during initial setup
+  const FRONTEND = process.env.FRONTEND_URL || "*";
+
   app.use(
     cors({
-      origin: "http://localhost:5173",
+      origin: FRONTEND,
       credentials: true,
     })
   );
 
-  // 🔥 JSON body parsing
   app.use(express.json());
 
-  // Apply authentication middleware, so that each request can have user info attached to it.
+  // Authentication middleware (attaches req.user if token present)
   app.use(authMiddleware);
 
-  // ⭐ Login API Route
+  // Login route
+  const User = require("./models/User");
+  const bcrypt = require("bcryptjs");
+  const jwt = require("jsonwebtoken");
+
   app.post("/login", async (req, res) => {
-    // CORS for login
-    res.header("Access-Control-Allow-Origin", "http://localhost:5173");
+    res.header("Access-Control-Allow-Origin", FRONTEND);
     res.header("Access-Control-Allow-Credentials", "true");
-
     const { username, password } = req.body;
-
     try {
       const user = await User.findOne({ username });
       if (!user) return res.status(400).json({ error: "Invalid username or password" });
-
       const match = await bcrypt.compare(password, user.passwordHash);
       if (!match) return res.status(400).json({ error: "Invalid username or password" });
 
@@ -52,11 +48,7 @@ async function start() {
         { expiresIn: "7d" }
       );
 
-      return res.json({
-        token,
-        role: user.role,
-        employeeId: user.employeeId || null,
-      });
+      return res.json({ token, role: user.role, employeeId: user.employeeId || null });
     } catch (err) {
       console.error(err);
       return res.status(500).json({ error: "Server error" });
@@ -66,27 +58,25 @@ async function start() {
   const server = new ApolloServer({
     typeDefs,
     resolvers,
-    context: ({ req }) => ({
-      user: req.user,
-      loaders: require("./dataloader")(),
-    }),
+    context: ({ req }) => ({ user: req.user, loaders: require("./dataloader")() }),
   });
 
-  // Start the Apollo Server
   await server.start();
 
-  // 🔥 Apollo middleware with correct CORS
+  // Apply Apollo middleware to Express app
   server.applyMiddleware({
     app,
     path: "/graphql",
     cors: {
-      origin: "http://localhost:5173",
+      origin: FRONTEND,
       credentials: true,
     },
   });
 
+  // Connect to MongoDB and start the server
   const PORT = process.env.PORT || 4000;
 
+  // Connect to MongoDB
   await mongoose.connect(process.env.MONGO_URI, {
     useNewUrlParser: true,
     useUnifiedTopology: true,
@@ -98,7 +88,7 @@ async function start() {
   });
 }
 
-// Start the server and handle any errors.
+// Start the server
 start().catch((err) => {
   console.error(err);
   process.exit(1);
