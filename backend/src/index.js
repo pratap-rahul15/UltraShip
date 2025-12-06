@@ -12,30 +12,17 @@ const cors = require("cors");
 async function start() {
   const app = express();
 
-  // Use FRONTEND_URL from env or allow all 
+  // Use FRONTEND_URL from env or allow all during initial setup
   const FRONTEND = process.env.FRONTEND_URL || "*";
 
-  
-  app.use(express.json());
-
-  //  CORS MIDDLEWARE 
   app.use(
     cors({
       origin: FRONTEND,
       credentials: true,
-      methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-      allowedHeaders: ["Content-Type", "Authorization"],
     })
   );
 
-  //  Preflight handler for CORS 
-  app.options("*", (req, res) => {
-    res.header("Access-Control-Allow-Origin", FRONTEND);
-    res.header("Access-Control-Allow-Credentials", "true");
-    res.header("Access-Control-Allow-Headers", "Content-Type, Authorization");
-    res.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
-    return res.sendStatus(200);
-  });
+  app.use(express.json());
 
   // Authentication middleware (attaches req.user if token present)
   app.use(authMiddleware);
@@ -45,20 +32,28 @@ async function start() {
   const bcrypt = require("bcryptjs");
   const jwt = require("jsonwebtoken");
 
+  // 🔥🔥🔥 ADDED FULL DEBUG LOGS HERE
   app.post("/login", async (req, res) => {
-    res.header("Access-Control-Allow-Origin", FRONTEND);
-    res.header("Access-Control-Allow-Credentials", "true");
-
-    console.log("REQ BODY DEBUG:", req.body); 
+    console.log("REQ BODY DEBUG:", req.body);
 
     const { username, password } = req.body;
 
     try {
       const user = await User.findOne({ username });
-      if (!user) return res.status(400).json({ error: "Invalid username or password" });
+      console.log("DB USER FOUND:", user);
+
+      if (!user) {
+        console.log("LOGIN ERROR: user not found in database");
+        return res.status(400).json({ error: "Invalid username or password" });
+      }
 
       const match = await bcrypt.compare(password, user.passwordHash);
-      if (!match) return res.status(400).json({ error: "Invalid username or password" });
+      console.log("PASSWORD MATCH RESULT:", match);
+
+      if (!match) {
+        console.log("LOGIN ERROR: incorrect password");
+        return res.status(400).json({ error: "Invalid username or password" });
+      }
 
       const token = jwt.sign(
         { id: user._id, role: user.role, employeeId: user.employeeId },
@@ -66,9 +61,16 @@ async function start() {
         { expiresIn: "7d" }
       );
 
-      return res.json({ token, role: user.role, employeeId: user.employeeId || null });
+      console.log("LOGIN SUCCESS: token generated");
+
+      return res.json({
+        token,
+        role: user.role,
+        employeeId: user.employeeId || null,
+      });
+
     } catch (err) {
-      console.error(err);
+      console.error("SERVER LOGIN ERROR:", err);
       return res.status(500).json({ error: "Server error" });
     }
   });
@@ -94,12 +96,19 @@ async function start() {
   // Connect to MongoDB and start the server
   const PORT = process.env.PORT || 4000;
 
+  console.log("⏳ Connecting to MongoDB:", process.env.MONGO_URI);
+
   // Connect to MongoDB
-  await mongoose.connect(process.env.MONGO_URI);
+  await mongoose.connect(process.env.MONGO_URI, {
+    useNewUrlParser: true,
+    useUnifiedTopology: true,
+  });
+
+  console.log("✔ MongoDB connected successfully");
 
   // Start the server
   app.listen(PORT, () => {
-    console.log(` Server ready at http://localhost:${PORT}${server.graphqlPath}`);
+    console.log(`🚀 Server ready at http://localhost:${PORT}${server.graphqlPath}`);
   });
 }
 
