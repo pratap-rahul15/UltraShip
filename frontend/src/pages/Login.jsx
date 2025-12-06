@@ -28,7 +28,7 @@ export default function Login({ onLogin }) {
       localStorage.setItem("role", data.role);
       localStorage.setItem("username", username);
 
-      toast.success("Welcome back ${username}!");
+      toast.success("Welcome back");
       onLogin(); 
     } catch (err) {
       toast.error(err.message);
