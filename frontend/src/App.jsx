@@ -8,12 +8,12 @@ import { useContext } from "react";
 export default function App() {
   const { token, login } = useContext(AuthContext);
 
-  // If no token then simply redirect to the show login page.
+  // If not logged in → show Login page
   if (!token) {
     return <Login onLogin={login} />;
   }
 
-  // If token exists then load the app
+  // If logged in → show Dashboard
   return (
     <MainLayout>
       <Routes>

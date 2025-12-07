@@ -6,36 +6,38 @@ export default function Login({ onLogin }) {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
 
- // API URL from env or default
+ 
   const API = import.meta.env.VITE_API_URL || "http://localhost:4000";
 
   async function handleSubmit(e) {
-    e.preventDefault();
-    setLoading(true);
+  e.preventDefault();
+  setLoading(true);
 
-    try {
-      const res = await fetch(`${API}/login`, {
+  try {
+    const res = await fetch(
+      "https://ultraship-backend-svqp.onrender.com/login",
+      {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ username, password }),
-      });
+      }
+    );
 
-      const data = await res.json();
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || "Login failed");
 
-      if (!res.ok) throw new Error(data.error || "Login failed");
+    toast.success("Welcome back");
 
-      localStorage.setItem("token", data.token);
-      localStorage.setItem("role", data.role);
-      localStorage.setItem("username", username);
+   
+    onLogin(data.token, data.role, username);  
 
-      toast.success("Welcome back");
-      onLogin(); 
-    } catch (err) {
-      toast.error(err.message);
-    } finally {
-      setLoading(false);
-    }
+  } catch (err) {
+    toast.error(err.message);
+  } finally {
+    setLoading(false);
   }
+}
+
 
   return (
     <div
