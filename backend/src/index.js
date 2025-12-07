@@ -12,23 +12,47 @@ const cors = require("cors");
 async function start() {
   const app = express();
 
-  // FRONTEND URL from Render env
-  const FRONTEND = process.env.FRONTEND_URL;
-  console.log("CORS ALLOW ORIGIN:", FRONTEND);
 
-  // Global CORS
+  const PROD_FRONTEND = process.env.FRONTEND_URL;
+
+
+  const allowedOrigins = [
+    PROD_FRONTEND,
+    "http://localhost:5173",
+    "http://localhost:3000",
+  ];
+
+  function isAllowedOrigin(origin) {
+    if (!origin) return true;
+    if (allowedOrigins.includes(origin)) return true;
+    if (origin.endsWith(".vercel.app")) return true;
+    return false;
+  }
+
+  // Global CORS Middleware
   app.use(
     cors({
-      origin: FRONTEND,
-      methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+      origin: function (origin, callback) {
+        if (isAllowedOrigin(origin)) {
+          callback(null, true);
+        } else {
+          console.log(" BLOCKED ORIGIN:", origin);
+          callback(new Error("Not allowed by CORS"));
+        }
+      },
       credentials: true,
+      methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
       allowedHeaders: ["Content-Type", "Authorization"],
     })
   );
 
-  // Preflight handler (CRITICAL for Vercel)
+  // Preflight handler
   app.options("*", (req, res) => {
-    res.header("Access-Control-Allow-Origin", FRONTEND);
+    const origin = req.headers.origin;
+
+    if (isAllowedOrigin(origin)) {
+      res.header("Access-Control-Allow-Origin", origin);
+    }
     res.header("Access-Control-Allow-Methods", "GET,POST,PUT,DELETE,OPTIONS");
     res.header("Access-Control-Allow-Headers", "Content-Type, Authorization");
     res.header("Access-Control-Allow-Credentials", "true");
@@ -37,39 +61,31 @@ async function start() {
 
   app.use(express.json());
 
-  // Authentication middleware (attaches req.user if token present)
+  // Authentication middleware
   app.use(authMiddleware);
 
-  // Login route
+  // Models
   const User = require("./models/User");
   const bcrypt = require("bcryptjs");
   const jwt = require("jsonwebtoken");
 
+  // Login route with proper CORS
   app.post("/login", async (req, res) => {
-    // Return proper CORS headers for login route
-    res.header("Access-Control-Allow-Origin", FRONTEND);
-    res.header("Access-Control-Allow-Credentials", "true");
+    const origin = req.headers.origin;
 
-    console.log("REQ BODY DEBUG:", req.body);
+    if (isAllowedOrigin(origin)) {
+      res.header("Access-Control-Allow-Origin", origin);
+    }
+    res.header("Access-Control-Allow-Credentials", "true");
 
     const { username, password } = req.body;
 
     try {
       const user = await User.findOne({ username });
-      console.log("DB USER FOUND:", user);
-
-      if (!user) {
-        console.log("LOGIN ERROR: user not found");
-        return res.status(400).json({ error: "Invalid username or password" });
-      }
+      if (!user) return res.status(400).json({ error: "Invalid username or password" });
 
       const match = await bcrypt.compare(password, user.passwordHash);
-      console.log("PASSWORD MATCH RESULT:", match);
-
-      if (!match) {
-        console.log("LOGIN ERROR: incorrect password");
-        return res.status(400).json({ error: "Invalid username or password" });
-      }
+      if (!match) return res.status(400).json({ error: "Invalid username or password" });
 
       const token = jwt.sign(
         { id: user._id, role: user.role, employeeId: user.employeeId },
@@ -77,17 +93,13 @@ async function start() {
         { expiresIn: "7d" }
       );
 
-      return res.json({
-        token,
-        role: user.role,
-        username: user.username,
-      });
-
+      return res.json({ token, role: user.role, username });
     } catch (err) {
-      console.error("LOGIN SERVER ERROR:", err);
+      console.error("LOGIN ERROR:", err);
       return res.status(500).json({ error: "Server error" });
     }
   });
+
 
   const server = new ApolloServer({
     typeDefs,
@@ -97,28 +109,29 @@ async function start() {
 
   await server.start();
 
-  // Apply Apollo middleware to Express app
   server.applyMiddleware({
     app,
     path: "/graphql",
     cors: {
-      origin: FRONTEND,
+      origin: function (origin, callback) {
+        if (isAllowedOrigin(origin)) callback(null, true);
+        else callback(new Error("Not allowed by CORS"));
+      },
       credentials: true,
     },
   });
 
-  // Connect to MongoDB and start the server
+  // MongoDB
   const PORT = process.env.PORT || 4000;
-
   await mongoose.connect(process.env.MONGO_URI);
 
-  // Start the server
+  // Start server
   app.listen(PORT, () => {
-    console.log(` Server ready at http://localhost:${PORT}${server.graphqlPath}`);
+    console.log(` Server ready at port ${PORT}`);
   });
 }
 
-// Start the server
+// Start server
 start().catch((err) => {
   console.error(err);
   process.exit(1);
