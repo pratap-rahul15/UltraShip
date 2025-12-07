@@ -12,40 +12,64 @@ const cors = require("cors");
 async function start() {
   const app = express();
 
-  // Use FRONTEND_URL from env or allow all during initial setup
-const allowedOrigins = [
-  "http://localhost:5173",
-  "https://ultraship-phi.vercel.app"
-];
+  // FRONTEND URL from Render env
+  const FRONTEND = process.env.FRONTEND_URL;
+  console.log("CORS ALLOW ORIGIN:", FRONTEND);
 
-app.use(
-  cors({
-    origin: allowedOrigins,
-    credentials: true,
-  })
-);
+  // Global CORS
+  app.use(
+    cors({
+      origin: FRONTEND,
+      methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+      credentials: true,
+      allowedHeaders: ["Content-Type", "Authorization"],
+    })
+  );
+
+  // Preflight handler (CRITICAL for Vercel)
+  app.options("*", (req, res) => {
+    res.header("Access-Control-Allow-Origin", FRONTEND);
+    res.header("Access-Control-Allow-Methods", "GET,POST,PUT,DELETE,OPTIONS");
+    res.header("Access-Control-Allow-Headers", "Content-Type, Authorization");
+    res.header("Access-Control-Allow-Credentials", "true");
+    return res.sendStatus(200);
+  });
 
   app.use(express.json());
 
-  // Authentication middleware 
+  // Authentication middleware (attaches req.user if token present)
   app.use(authMiddleware);
 
-  // Models
+  // Login route
   const User = require("./models/User");
-  const Employee = require("./models/Employee");
   const bcrypt = require("bcryptjs");
   const jwt = require("jsonwebtoken");
 
-// Auth Routes
   app.post("/login", async (req, res) => {
+    // Return proper CORS headers for login route
+    res.header("Access-Control-Allow-Origin", FRONTEND);
+    res.header("Access-Control-Allow-Credentials", "true");
+
+    console.log("REQ BODY DEBUG:", req.body);
+
     const { username, password } = req.body;
 
     try {
       const user = await User.findOne({ username });
-      if (!user) return res.status(400).json({ error: "Invalid username or password" });
+      console.log("DB USER FOUND:", user);
+
+      if (!user) {
+        console.log("LOGIN ERROR: user not found");
+        return res.status(400).json({ error: "Invalid username or password" });
+      }
 
       const match = await bcrypt.compare(password, user.passwordHash);
-      if (!match) return res.status(400).json({ error: "Invalid username or password" });
+      console.log("PASSWORD MATCH RESULT:", match);
+
+      if (!match) {
+        console.log("LOGIN ERROR: incorrect password");
+        return res.status(400).json({ error: "Invalid username or password" });
+      }
 
       const token = jwt.sign(
         { id: user._id, role: user.role, employeeId: user.employeeId },
@@ -53,36 +77,18 @@ app.use(
         { expiresIn: "7d" }
       );
 
-      return res.json({ token, role: user.role, employeeId: user.employeeId || null });
+      return res.json({
+        token,
+        role: user.role,
+        username: user.username,
+      });
+
     } catch (err) {
-      console.error("LOGIN ERROR:", err);
+      console.error("LOGIN SERVER ERROR:", err);
       return res.status(500).json({ error: "Server error" });
     }
   });
 
-
-  app.get("/create-admin", async (req, res) => {
-    try {
-      const existing = await User.findOne({ username: "admin" });
-      if (existing) return res.json({ message: "Admin already exists" });
-
-      const hash = await bcrypt.hash("AdminPass123", 10);
-
-      await User.create({
-        username: "admin",
-        passwordHash: hash,
-        role: "admin",
-        employeeId: null,
-      });
-
-      res.json({ message: "Admin created (admin / AdminPass123)" });
-    } catch (err) {
-      console.error("ADMIN CREATE ERROR:", err);
-      res.status(500).json({ error: "Unable to create admin" });
-    }
-  });
-
-  // Apollo Server Setup
   const server = new ApolloServer({
     typeDefs,
     resolvers,
@@ -91,24 +97,24 @@ app.use(
 
   await server.start();
 
-server.applyMiddleware({
-  app,
-  path: "/graphql",
-  cors: {
-    origin: allowedOrigins,
-    credentials: true,
-  },
-});
+  // Apply Apollo middleware to Express app
+  server.applyMiddleware({
+    app,
+    path: "/graphql",
+    cors: {
+      origin: FRONTEND,
+      credentials: true,
+    },
+  });
 
-
+  // Connect to MongoDB and start the server
   const PORT = process.env.PORT || 4000;
 
-  // Connect to MongoDB
   await mongoose.connect(process.env.MONGO_URI);
 
   // Start the server
   app.listen(PORT, () => {
-    console.log(` Server running at port ${PORT}`);
+    console.log(` Server ready at http://localhost:${PORT}${server.graphqlPath}`);
   });
 }
 
