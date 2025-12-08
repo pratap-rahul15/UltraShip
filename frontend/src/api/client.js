@@ -2,12 +2,16 @@ import { ApolloClient, InMemoryCache, createHttpLink } from "@apollo/client";
 import { setContext } from "@apollo/client/link/context";
 
 
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL;
+
+console.log(" Loaded Backend URL:", BACKEND_URL); 
+
+
 const httpLink = createHttpLink({
-  uri: `${import.meta.env.VITE_API_URL}/graphql`,
-  credentials: "include", 
+  uri: `${BACKEND_URL}/graphql`,
 });
 
-//  Attach the Bearer token here automatically
+
 const authLink = setContext((_, { headers }) => {
   const token = localStorage.getItem("token");
 
@@ -19,7 +23,7 @@ const authLink = setContext((_, { headers }) => {
   };
 });
 
-
+e
 export const client = new ApolloClient({
   link: authLink.concat(httpLink),
   cache: new InMemoryCache(),
